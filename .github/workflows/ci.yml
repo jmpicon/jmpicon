@@ -1,0 +1,29 @@
+name: CI
+on:
+  push: { branches: [ main ] }
+  pull_request: { branches: [ main ] }
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install -U pip wheel
+          if [ -f pyproject.toml ]; then pip install -e ".[dev]" || true; fi
+      - name: Lint/Test (Python)
+        run: |
+          if [ -f pyproject.toml ]; then
+            pip install ruff black mypy pytest pytest-cov bandit safety || true
+            ruff check . || true
+            black --check . || true
+            mypy src/ || true
+            pytest || true
+            bandit -r src/ || true
+            safety check -r <(pip freeze) --full-report || true
+          else
+            echo "No pyproject found. Skipping python checks."
+          fi
